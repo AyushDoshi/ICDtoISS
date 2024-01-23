@@ -69,18 +69,30 @@ def get_preds_indirect_ff(scores):
     return (scores >= 0.3).nonzero(as_tuple=False).flatten().tolist()
 
 
-def calc_iss(rcs_list):
-    severity_body_regions = sorted([rcs[4] + '.' + rcs[0] for rcs in rcs_list if rcs[4] != '9'], reverse=True)
-    if not severity_body_regions:
+def calc_severity_scores(rcs_list, no_iss_bool, mais_bool, max_severity_chapter_bool):
+    severity_region_chapter = sorted([rcs[4] + '.' + rcs[0] + '.' + rcs[2] for rcs in rcs_list if rcs[4] != '9'], reverse=True)
+    if not severity_region_chapter:
         return 'NaN'
     else:
-        body_regions_list = [pair[2] for pair in severity_body_regions]
-        unique_body_regions_list = list(dict.fromkeys(body_regions_list))
-        severity_body_regions_iter = (int(severity_body_regions[body_regions_list.index(body_region)][0]) for
-                                      body_region in unique_body_regions_list)
-        top_3_region_unique_severities = list(islice(severity_body_regions_iter, 3))
-        if top_3_region_unique_severities[0] == 6:
-            iss = 75
-        else:
-            iss = sum(severity * severity for severity in top_3_region_unique_severities)
-        return str(iss)
+        output_severity_list = []
+        if not no_iss_bool or mais_bool:
+            body_regions_list = [pair[2] for pair in severity_region_chapter]
+            unique_body_regions_list = list(dict.fromkeys(body_regions_list))
+            severity_body_regions_iter = (int(severity_region_chapter[body_regions_list.index(body_region)][0]) for
+                                          body_region in unique_body_regions_list)
+            top_3_region_unique_severities = list(islice(severity_body_regions_iter, 3))
+            if not no_iss_bool:
+                if top_3_region_unique_severities[0] == 6:
+                    output_severity_list.append(str(75))
+                else:
+                    output_severity_list.append(str(sum(severity * severity for severity in top_3_region_unique_severities)))
+            if mais_bool:
+                output_severity_list.append(str(top_3_region_unique_severities[0]))
+        if max_severity_chapter_bool:
+            max_severity_dict = {'0': '0', '1': '0', '2': '0', '3': '0', '4': '0', '5': '0', '6': '0', '7': '0', '8': '0', '9': '0'}
+            for src in severity_region_chapter:
+                if max_severity_dict[src[4]] < src[0]:
+                    max_severity_dict[src[4]] = src[0]
+            output_severity_list = output_severity_list + list(max_severity_dict.values())
+
+        return ','.join(output_severity_list)

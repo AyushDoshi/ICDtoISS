@@ -1,7 +1,7 @@
 from bisect import bisect_left
 from importlib import resources
 from os import sep, linesep
-from os.path import commonprefix, dirname, join
+from os.path import commonprefix, splitext
 import pickle
 
 import ctranslate2
@@ -10,7 +10,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from ICDtoISS.bin import helper
+import helper
 
 
 def import_data(input_type, filepath):
@@ -20,21 +20,28 @@ def import_data(input_type, filepath):
             codes_per_row_df.columns = ['key', 'ICD10Code']
 
             keys, values = codes_per_row_df.sort_values('key').values.T
-            ukeys, index = np.unique(keys, True)
+            patient_ids, index = np.unique(keys, True)
             arrays = np.split(values, index[1:])
-
             codes_per_case_setlist = [set(a) for a in arrays]
 
         case 'case_per_row':
             with open(filepath, 'r') as input_file:
                 codes_per_case_list = input_file.readlines()
-            codes_per_case_setlist = [set(codes_str.split(',')) for codes_str in codes_per_case_list]
 
-    return codes_per_case_setlist
+            patient_ids = []
+            codes_per_case_setlist = []
+            for codes_str in codes_per_case_list:
+                code_list = codes_str.split(',')
+                patient_ids.append(code_list.pop(0))
+                codes_per_case_setlist.append(set(code_list))
+        case '_':
+            raise ValueError('Incompatible file structure type was given. Can only accept "code_per_row" or "case_per_row".')
+
+    return patient_ids, codes_per_case_setlist
 
 
 def preprocess_data(codes_per_case_setlist, unknown_mode):
-    with resources.files('ICDtoISS.data').joinpath('icd10_to_dummy_dict.pickle').open('rb') as dict_serialized:
+    with resources.files('data').joinpath('icd10_to_dummy_dict.pickle').open('rb') as dict_serialized:
         icd10_to_dummy_set = set(pickle.load(dict_serialized).keys())
 
     match unknown_mode:
@@ -89,13 +96,16 @@ def preprocess_data(codes_per_case_setlist, unknown_mode):
 
             all_unrecognized_codes = sorted(all_unrecognized_codes_set)
 
+        case '_':
+            raise ValueError('Incompatible unknown code handling method was given. Can only accept "closest", "ignore", or "fail".')
+
     return codes_per_case_list, all_unrecognized_codes
 
 
 def formatting_data(codes_per_case_list, model_type):
     match model_type:
         case 'direct_FFNN' | 'indirect_FFNN':
-            with resources.files('ICDtoISS.data').joinpath('icd10_to_dummy_dict.pickle').open(
+            with resources.files('data').joinpath('icd10_to_dummy_dict.pickle').open(
                     'rb') as dict_serialized:
                 icd10_to_dummy_dict = pickle.load(dict_serialized)
 
@@ -109,6 +119,9 @@ def formatting_data(codes_per_case_list, model_type):
             ]
             return formatted_codes_per_case_list
 
+        case '_':
+            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
+
 
 def convert_data(formatted_input_data, model_type):
     match model_type:
@@ -116,18 +129,17 @@ def convert_data(formatted_input_data, model_type):
 
             device = "cuda" if torch.cuda.is_available() else "cpu"
             device = torch.device(device)
-            print(f"Using {device} device")
 
             prediction_list = []
 
             if model_type == 'direct_FFNN':
                 model = helper.NeuralNetworkISS(num_input_categories=18372, num_output_categories=44)
-                model_path = str(resources.files('ICDtoISS.data').joinpath('direct_FF_model.tar'))
+                model_path = str(resources.files('data').joinpath('direct_FF_model.tar'))
                 model.load_state_dict(torch.load(model_path, map_location=device))
                 get_prediction = helper.get_preds_direct_ff
             else:
                 model = helper.NeuralNetworkAIS(num_input_categories=18372, num_output_categories=104)
-                model_path = str(resources.files('ICDtoISS.data').joinpath('indirect_FF_model.tar'))
+                model_path = str(resources.files('data').joinpath('indirect_FF_model.tar'))
                 model.load_state_dict(torch.load(model_path, map_location=device))
                 get_prediction = helper.get_preds_indirect_ff
 
@@ -147,7 +159,7 @@ def convert_data(formatted_input_data, model_type):
         case 'direct_NMT' | 'indirect_NMT':
             translator_path = 'direct_NMT_model' + sep if model_type == 'direct_NMT' else 'indirect_NMT_model' + sep
             translator = ctranslate2.Translator(
-                str(resources.files('ICDtoISS.data').joinpath(translator_path)),
+                str(resources.files('data').joinpath(translator_path)),
                 device='cpu')
 
             results = []
@@ -157,11 +169,14 @@ def convert_data(formatted_input_data, model_type):
 
             return results
 
+        case '_':
+            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
 
-def postprocess_data(conversion_output, model_type):
+
+def postprocess_data(conversion_output, model_type, no_iss_bool, mais_bool, max_severity_chapter_bool):
     match model_type:
         case 'direct_FFNN':
-            with (resources.files('ICDtoISS.data').joinpath('dummy_to_iss_dict.pickle').open('rb')
+            with (resources.files('data').joinpath('dummy_to_iss_dict.pickle').open('rb')
                   as dict_serialized):
                 dummy_to_iss_dict = pickle.load(dict_serialized)
             return [
@@ -170,7 +185,7 @@ def postprocess_data(conversion_output, model_type):
             ]
 
         case 'direct_NMT':
-            with (resources.files('ICDtoISS.data').joinpath('dummy_to_iss_dict.pickle').open('rb')
+            with (resources.files('data').joinpath('dummy_to_iss_dict.pickle').open('rb')
                   as dict_serialized):
                 possible_iss_set = set(pickle.load(dict_serialized).values())
             return [
@@ -179,43 +194,72 @@ def postprocess_data(conversion_output, model_type):
                 for pred in conversion_output]
 
         case 'indirect_FFNN':
-            with (resources.files('ICDtoISS.data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
+            with (resources.files('data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
                   as dict_serialized):
                 dummy_to_ais_rcs_dict = pickle.load(dict_serialized)
             return [
-                helper.calc_iss(
+                helper.calc_severity_scores(
                     [dummy_to_ais_rcs_dict[encoded_rcs]
                      for encoded_rcs in encoded_rcs_list
-                     ]
-                )
+                     ], no_iss_bool, mais_bool, max_severity_chapter_bool)
                 if encoded_rcs_list else 'NaN'
                 for encoded_rcs_list in conversion_output
             ]
 
         case 'indirect_NMT':
-            with (resources.files('ICDtoISS.data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
+            with (resources.files('data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
                   as dict_serialized):
                 possible_ais_rcs_set = set(pickle.load(dict_serialized).values())
 
-            iss_list = []
+            output_list = []
             for pred_rcs_list in conversion_output:
                 pred_rcs_set = set(pred_rcs_list)
                 for pred_rcs in set(pred_rcs_set):
                     if pred_rcs not in possible_ais_rcs_set:
                         pred_rcs_set.remove(pred_rcs)
                 if pred_rcs_set:
-                    iss_list.append(helper.calc_iss(pred_rcs_set))
+                    output_list.append(helper.calc_severity_scores(pred_rcs_set, no_iss_bool, mais_bool, max_severity_chapter_bool))
                 else:
-                    iss_list.append('NaN')
+                    output_list.append('NaN')
 
-            return iss_list
+            return output_list
+
+        case '_':
+            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
 
 
-def output_iss_results(iss_list, file_path):
-    repr(linesep)
-    output_file_path = join(dirname(file_path), 'iss_predictions.csv')
+def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_bool, mais_bool, max_severity_chapter_bool):
+    output_file_addon = model_type
+    file_header = 'patient_id'
+    nan_string_list = []
+
+    match model_type:
+        case 'direct_FFNN' | 'direct_NMT':
+            output_file_addon = output_file_addon + '_iss'
+            file_header = file_header + ',iss'
+            nan_string_list.append('NaN')
+        case 'indirect_FFNN' | 'indirect_NMT':
+            if not no_iss_bool:
+                output_file_addon = output_file_addon + '_iss'
+                file_header = file_header + ',iss'
+                nan_string_list.append('NaN')
+            if mais_bool:
+                output_file_addon = output_file_addon + '_mais'
+                file_header = file_header + ',mais'
+                nan_string_list.append('NaN')
+            if max_severity_chapter_bool:
+                output_file_addon = output_file_addon + '_max_chapter_severity'
+                file_header = file_header + ',chapter_0,chapter_1,chapter_2,chapter_3,chapter_4,chapter_5,chapter_6,chapter_7,chapter_8,chapter_9'
+                nan_string_list = nan_string_list + ['NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN']
+
+    output_file_path = splitext(file_path)[0] + '.' + output_file_addon + '.csv'
+    nan_string = ','.join(nan_string_list)
+
     with open(output_file_path, 'w') as output_file:
-        for iss in iss_list:
-            output_file.write(iss + '\n')
+        output_file.write(file_header + '\n')
+        for patient_id, output in zip(patient_ids, output_list):
+            if output == 'NaN':
+                output_file.write(patient_id + ',' + nan_string + '\n')
+            else:
+                output_file.write(patient_id + ',' + output + '\n')
     return output_file_path
-
