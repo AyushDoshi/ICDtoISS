@@ -16,13 +16,18 @@ import helper
 def import_data(input_type, filepath):
     match input_type:
         case 'code_per_row':
-            codes_per_row_df = pd.read_csv(filepath, dtype='string')
+            codes_per_row_df = pd.read_csv(filepath, dtype='string', header=None)
             codes_per_row_df.columns = ['key', 'ICD10Code']
 
             keys, values = codes_per_row_df.sort_values('key').values.T
             patient_ids, index = np.unique(keys, True)
             arrays = np.split(values, index[1:])
-            codes_per_case_setlist = [set(a) for a in arrays]
+            codes_per_case_setlist = []
+            for patient_idx, codes_list in enumerate(arrays):
+                s_and_t_only_codes_list = [code for code in codes_list if code[0].upper() in ['S', 'T']]
+                if not s_and_t_only_codes_list:
+                    raise ValueError(f'Case with ID#{patient_ids[patient_idx]} does not contain any trauma (S00-T88) ICD-10 codes.')
+                codes_per_case_setlist.append(set(s_and_t_only_codes_list))
 
         case 'case_per_row':
             with open(filepath, 'r') as input_file:
@@ -33,7 +38,10 @@ def import_data(input_type, filepath):
             for codes_str in codes_per_case_list:
                 code_list = codes_str.split(',')
                 patient_ids.append(code_list.pop(0))
-                codes_per_case_setlist.append(set(code_list))
+                s_and_t_only_codes_list = [code for code in code_list if code[0].upper() in ['S', 'T']]
+                if not s_and_t_only_codes_list:
+                    raise ValueError(f'The following case does not contain any trauma (S00-T88) ICD-10 codes:\n{codes_str}')
+                codes_per_case_setlist.append(set(s_and_t_only_codes_list))
         case '_':
             raise ValueError('Incompatible file structure type was given. Can only accept "code_per_row" or "case_per_row".')
 
@@ -81,7 +89,10 @@ def preprocess_data(codes_per_case_setlist, unknown_mode):
 
         case 'ignore':
             codes_per_case_list = [sorted(code_set & icd10_to_dummy_set) for code_set in codes_per_case_setlist]
-            all_unrecognized_codes = None
+            if not all(codes_per_case_list):
+                all_unrecognized_codes = [idx for idx, array in enumerate(codes_per_case_list) if not array]
+            else:
+                all_unrecognized_codes = None
 
         case 'fail':
             codes_per_case_list = []
@@ -249,7 +260,7 @@ def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_b
                 nan_string_list.append('NaN')
             if max_severity_chapter_bool:
                 output_file_addon = output_file_addon + '_max_chapter_severity'
-                file_header = file_header + ',chapter_0,chapter_1,chapter_2,chapter_3,chapter_4,chapter_5,chapter_6,chapter_7,chapter_8,chapter_9'
+                file_header = file_header + ',ch1_head,ch2_face,ch3_neck,ch4_thorax,ch5_abdomen,ch6_spine,ch7_upper_extremity,ch8_lower_extremity,ch9_external,ch0_miscellaneous'
                 nan_string_list = nan_string_list + ['NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN']
 
     output_file_path = splitext(file_path)[0] + '.' + output_file_addon + '.csv'

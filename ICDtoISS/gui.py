@@ -94,9 +94,7 @@ class ICDtoISSApp(ctk.CTk):
         # Add input file structure text and associated segment button
         self.input_file_structure_logo = ctk.CTkLabel(self.options_frame, text='Input file\ndata structure:', padx=5, font=ctk.CTkFont(size=14, weight='bold'), justify='right')
         self.input_file_structure_logo.grid(row=2, column=0, columnspan=1, padx=(20, 0), pady=(20, 0), sticky='nse')
-        self.input_file_structure_logo_tooltip = CTkToolTip(self.input_file_structure_logo, delay=0.5, alpha=0.9, message="Select the structure of the input data:\n"
-                                                                    "Long Format: Each row is a an ID and ICD-10 code CSV pair. The ICD-10 codes for a given case span multiple rows\n"
-                                                                    "Wide Format: Each row contains a CSV list of all ICD-10 codes for a given case. Case IDs are unique across rows")
+        self.input_file_structure_logo_tooltip = CTkToolTip(self.input_file_structure_logo, delay=0.5, alpha=0.9, message="Select the structure of the input data.\nHover over examples below for explanations.")
 
         self.input_file_structure_segment = ctk.CTkSegmentedButton(self.options_frame, variable=self.input_file_structure_strvar, font=ctk.CTkFont(size=14, weight='bold'), dynamic_resizing=True,
                                                                              values=['Long Format:\nCode per Row', 'Wide Format:\nCase per Row'])
@@ -112,11 +110,16 @@ class ICDtoISSApp(ctk.CTk):
         self.long_example_body = ctk.CTkLabel(self.file_structure_example_frame, font=ctk.CTkFont(size=10),
                                               text='Pt. ID #, ICD Code\nPt. ID 1, S71.019A\nPt. ID 1, S71.139A\nPt. ID 2, S00.83XA\nPt. ID 3, S20.91XA\nPt. ID 3, S30.811A\nPt. ID 3, S70.219A', )
         self.long_example_body.grid(row=1, column=0, padx=(0, 55), pady=(0, 0), sticky='ne')
+        self.long_example_header_tooltip = CTkToolTip(self.long_example_header, delay=0.5, alpha=0.9, message="Long Format: Each row is a case ID and ICD-10 code CSV pair.\nThe ICD-10 codes for a given case span multiple rows.")
+        self.long_example_body_tooltip = CTkToolTip(self.long_example_body, delay=0.5, alpha=0.9, message="Long Format: Each row is a case ID and ICD-10 code CSV pair.\nThe ICD-10 codes for a given case span multiple rows.")
+
         self.wide_example_header = ctk.CTkLabel(self.file_structure_example_frame, text='Wide Format Example:',  font=ctk.CTkFont(size=14, underline=True))
         self.wide_example_header.grid(row=0, column=1, padx=(45, 0), pady=(0, 0), sticky='w')
         self.wide_example_body = ctk.CTkLabel(self.file_structure_example_frame, justify='left', font=ctk.CTkFont(size=12),
-                                              text='Pt. ID #, Code 1, Code 2, Code 3, ... Code N\nPt. ID 1, S71.019A, S71.139A\nPt. ID 2, S00.83XA\nPt. ID 3, S20.91XA, S30.811A, S70.219A')
+                                              text='Pt. ID #, Code 1, Code 2, Code 3, ... Code n\nPt. ID 1, S71.019A, S71.139A\nPt. ID 2, S00.83XA\nPt. ID 3, S20.91XA, S30.811A, S70.219A')
         self.wide_example_body.grid(row=1, column=1, padx=(20, 0), pady=(0, 0), sticky='nw')
+        self.wide_example_header_tooltip = CTkToolTip(self.wide_example_header, delay=0.5, alpha=0.9, message="Wide Format: Each row contains a CSV list of all ICD-10 codes for a given case.\nEach row has a unique case ID.")
+        self.wide_example_body_tooltip = CTkToolTip(self.wide_example_body, delay=0.5, alpha=0.9, message="Wide Format: Each row contains a CSV list of all ICD-10 codes for a given case.\nEach row has a unique case ID.")
 
         # Add handle unknown code method text and associated segment button
         self.handle_unknown_code_logo = ctk.CTkLabel(self.options_frame, text='Method for handling\nunknown codes:', padx=5, font=ctk.CTkFont(size=14, weight='bold'), justify='right')
@@ -144,6 +147,10 @@ class ICDtoISSApp(ctk.CTk):
         # Add additional indirect output options frame and checkboxes
         self.indirect_options_logo = ctk.CTkLabel(self.options_frame, text='Indirect Model\noutput options:', padx=5, text_color=["gray60", "gray45"], font=ctk.CTkFont(size=14, weight='bold'), justify='right')
         self.indirect_options_logo.grid(row=6, column=0, columnspan=1, padx=(20, 0), pady=(20, 0), sticky='e')
+        self.indirect_options_logo_tooltip = CTkToolTip(self.indirect_options_logo, delay=0.5, alpha=0.9, message="Select which metrics to output when an indirect model is chosen. Checkbox selection is ignored when a direct model is used.\n"
+                                                                                                                        "ISS: Output Injury Severity Score.\n"
+                                                                                                                        "MAIS: Output Maximum Abbreviated Injury Scale score.\n"
+                                                                                                                        "Greatest Severity per AIS Chapter: Output the greatest AIS severity for each AIS chapter.")
 
         self.indirect_options_frame = ctk.CTkFrame(self.options_frame, fg_color='transparent', corner_radius=0)
         self.indirect_options_frame.grid(row=6, column=1, columnspan=1, padx=(5, 20), pady=(20, 0), sticky="nsew")
@@ -264,6 +271,13 @@ class ICDtoISSApp(ctk.CTk):
                 self.print_updates('The models were not developed using the following ICD-10 codes. The prediction will now abort.')
                 print(unrecognized_codes)
                 return
+
+            elif unknown_mode == 'ignore':
+                ids_wo_s_and_t_codes = [patient_ids[idx] for idx in unrecognized_codes]
+                self.print_updates('The cases with the following IDs did not contain any codes to convert after ignoring untrained codes. The prediction will now abort.')
+                print(ids_wo_s_and_t_codes)
+                return
+
             else:
                 self.print_updates('The following ICD-10 codes replacements were made.')
                 print(unrecognized_codes)

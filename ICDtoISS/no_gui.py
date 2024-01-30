@@ -19,6 +19,13 @@ def main(args):
             print_updates('The models were not developed using the following ICD-10 codes. The prediction will now abort.')
             print(unrecognized_codes)
             return
+
+        elif args.unknown_mode == 'ignore':
+            ids_wo_s_and_t_codes = [patient_ids[idx] for idx in unrecognized_codes]
+            print_updates('The cases with the following IDs did not contain any codes to convert after ignoring untrained codes.')
+            print(ids_wo_s_and_t_codes)
+            return
+
         else:
             print_updates('The following ICD-10 codes replacements were made.')
             print(unrecognized_codes)

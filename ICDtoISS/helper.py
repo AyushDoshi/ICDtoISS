@@ -89,7 +89,7 @@ def calc_severity_scores(rcs_list, no_iss_bool, mais_bool, max_severity_chapter_
             if mais_bool:
                 output_severity_list.append(str(top_3_region_unique_severities[0]))
         if max_severity_chapter_bool:
-            max_severity_dict = {'0': '0', '1': '0', '2': '0', '3': '0', '4': '0', '5': '0', '6': '0', '7': '0', '8': '0', '9': '0'}
+            max_severity_dict = {'1': '0', '2': '0', '3': '0', '4': '0', '5': '0', '6': '0', '7': '0', '8': '0', '9': '0', '0': '0'}
             for src in severity_region_chapter:
                 if max_severity_dict[src[4]] < src[0]:
                     max_severity_dict[src[4]] = src[0]
