@@ -5,13 +5,13 @@ from importlib import resources
 from os.path import abspath
 from pathlib import Path
 
-
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkMessagebox import CTkMessagebox
 
 import converter
 
+# Set default GUI appearance
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
@@ -25,11 +25,11 @@ class ICDtoISSApp(ctk.CTk):
         self.model_type_strvar = tk.StringVar(self, 'Direct\nFFNN')
         self.input_file_structure_strvar = tk.StringVar(self, 'Long Format:\nCode per Row')
         self.handle_unknown_code_strvar = tk.StringVar(self, 'Use lexicographically\nclosest code')
-        self.iss_intvar = tk.IntVar(self,1)
-        self.mais_intvar = tk.IntVar(self,0)
-        self.max_per_chapter_intvar = tk.IntVar(self,0)
+        self.iss_intvar = tk.IntVar(self, 1)
+        self.mais_intvar = tk.IntVar(self, 0)
+        self.max_per_chapter_intvar = tk.IntVar(self, 0)
 
-        # Configure window
+        # Configure main window
         self.title("ICDtoISS GUI")
         # self.geometry(f"{1000}x{400}")
         self.iconbitmap(str(resources.files('data').joinpath('gui_icon.ico')))
@@ -38,17 +38,20 @@ class ICDtoISSApp(ctk.CTk):
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        # Configue 3 main frames
         self.__init_sidebar_frame()
         self.__init_options_frame()
         self.__init_output_frame()
 
     def __init_sidebar_frame(self):
+        """Initialize informative sidebar frame."""
+
         # create sidebar frame with widgets
         self.sidebar_frame = ctk.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
 
-        # Add readme and github link buttons
+        # Add readme and GitHub link buttons
         self.readme_button = ctk.CTkButton(self.sidebar_frame, text='ReadMe', command=self.open_readme)
         self.readme_button.grid(row=1, column=0, padx=20, pady=(20, 0))
         self.github_button = ctk.CTkButton(self.sidebar_frame, text='GitHub', command=self.open_github)
@@ -73,6 +76,8 @@ class ICDtoISSApp(ctk.CTk):
         self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(5, 20))
 
     def __init_options_frame(self):
+        """Initialize input setting and variables frame."""
+
         # Set up options frame 6x2 frame
         self.options_frame = ctk.CTkFrame(self, fg_color='transparent', corner_radius=0)
         self.options_frame.grid(row=0, column=1, padx=(0, 0), pady=(0, 0), sticky="nsew")
@@ -103,7 +108,7 @@ class ICDtoISSApp(ctk.CTk):
         # Add input file structure example frame and text
         self.file_structure_example_frame = ctk.CTkFrame(self.options_frame, fg_color='transparent', corner_radius=0)
         self.file_structure_example_frame.grid(row=3, column=0, columnspan=2, padx=(0, 0), pady=(10, 0), sticky="nsew")
-        self.file_structure_example_frame.grid_columnconfigure((0,1), weight=1)
+        self.file_structure_example_frame.grid_columnconfigure((0, 1), weight=1)
 
         self.long_example_header = ctk.CTkLabel(self.file_structure_example_frame, text='Long Format Example:', font=ctk.CTkFont(size=14, underline=True))
         self.long_example_header.grid(row=0, column=0, padx=(0, 20), pady=(0, 0), sticky='e')
@@ -154,7 +159,7 @@ class ICDtoISSApp(ctk.CTk):
 
         self.indirect_options_frame = ctk.CTkFrame(self.options_frame, fg_color='transparent', corner_radius=0)
         self.indirect_options_frame.grid(row=6, column=1, columnspan=1, padx=(5, 20), pady=(20, 0), sticky="nsew")
-        self.indirect_options_frame.grid_columnconfigure((0,1,2), weight=1)
+        self.indirect_options_frame.grid_columnconfigure((0, 1, 2), weight=1)
         self.indirect_options_frame.rowconfigure(0, weight=1)
 
         self.iss_checkbox = ctk.CTkCheckBox(self.indirect_options_frame, text='ISS', variable=self.iss_intvar, font=ctk.CTkFont(size=14, weight='bold'), state='disabled')
@@ -164,12 +169,13 @@ class ICDtoISSApp(ctk.CTk):
         self.max_per_chapter_checkbox = ctk.CTkCheckBox(self.indirect_options_frame, variable=self.max_per_chapter_intvar, text='Greatest Severity\nper AIS Chapter', font=ctk.CTkFont(size=14, weight='bold'), state='disabled')
         self.max_per_chapter_checkbox.grid(row=0, column=2, padx=(0, 40), pady=(0, 0), sticky='nsew')
 
-
         # Add start conversion button
         self.start_button = ctk.CTkButton(self.options_frame, text='Begin Conversion', font=ctk.CTkFont(size=16, weight='bold'), command=self.convert_data)
         self.start_button.grid(row=7, column=0, columnspan=2, padx=(20, 20), pady=(20, 20), sticky='nsew')
 
     def __init_output_frame(self):
+        """Initialize frame containing output information."""
+
         # Add go button, progress bar, and output_textbox frame
         self.generate_frame = ctk.CTkFrame(self, corner_radius=0)
         self.generate_frame.grid(row=0, column=2, padx=(0, 0), pady=(0, 0), sticky="nsew")
@@ -194,23 +200,29 @@ class ICDtoISSApp(ctk.CTk):
         self.textbox.grid(row=3, column=0, padx=(20, 20), pady=(20, 20), sticky='nsew')
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
+        """Update gui appearance."""
         ctk.set_appearance_mode(new_appearance_mode)
 
     def change_scaling_event(self, new_scaling: str):
+        """Update gui size scaling."""
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
 
     def open_readme(self):
+        """Open GitHub readme in default browser."""
         webbrowser.open('https://github.com/AyushDoshi/ICDtoISS/blob/main/README.md', new=0, autoraise=True)
 
     def open_github(self):
+        """Open GitHub repository in default browser."""
         webbrowser.open('https://github.com/AyushDoshi/ICDtoISS', new=0, autoraise=True)
 
     def get_input_filepath_with_filedialog(self):
+        """Open file name dialogue box and set selected path."""
         filepath = abspath(ctk.filedialog.askopenfilename())
         self.input_file_path_strvar.set(filepath)
 
     def update_indirect_checkboxes(self, updated_segment):
+        """Update whether the indirect checkboxes are enabled or disabled when a new translation method is chosen."""
         match updated_segment:
             case 'Direct\nFFNN' | 'Direct\nNMT':
                 self.iss_intvar.set(1)
@@ -228,11 +240,14 @@ class ICDtoISSApp(ctk.CTk):
                 self.indirect_options_logo.configure(text_color=["gray10", "#DCE4EE"])
 
     def convert_data(self):
+        """Convert data in the selected file."""
 
+        # Clear output textbox
         self.textbox.configure(state='normal')
         self.textbox.delete('1.0', 'end')
         self.textbox.configure(state='disabled')
 
+        # Convert selected options strings into correct format used in the conversion functions
         widget_val_to_args_dict = {'Long Format:\nCode per Row': 'code_per_row', 'Wide Format:\nCase per Row': 'case_per_row',
                                    'Use lexicographically\nclosest code': 'closest', 'Ignore\nunknown codes': 'ignore', 'Abort on\nunknown codes': 'fail',
                                    'Direct\nFFNN': 'direct_FFNN', 'Direct\nNMT': 'direct_NMT', 'Indirect\nFFNN': 'indirect_FFNN', 'Indirect\nNMT': 'indirect_NMT',
@@ -246,47 +261,56 @@ class ICDtoISSApp(ctk.CTk):
         mais_checkbox_value = widget_val_to_args_dict[self.mais_intvar.get()]
         max_per_chapter_checkbox_value = widget_val_to_args_dict[self.max_per_chapter_intvar.get()]
 
+        # Confirm a valid file path is given
         if not Path(input_filepath).is_file():
             CTkMessagebox(title="Error", message="No valid input file given!", icon="cancel")
             return
 
+        # Confirm at least one output is chosen when an indirect conversion method is used
         if model_type in ['indirect_FFNN', 'indirect_NMT'] and iss_checkbox_value == mais_checkbox_value == max_per_chapter_checkbox_value is False:
             CTkMessagebox(title="Error", message="At least one indirect output checkbox must be selected!", icon="cancel")
             return
 
+        # Write out selected variables in output textbox
         variables_dict = {'input_filepath': input_filepath, 'input_type': input_type, 'unknown_mode': unknown_mode, 'model_type': model_type, 'iss_checkbox_value': iss_checkbox_value, 'mais_checkbox_value': mais_checkbox_value, 'max_per_chapter_checkbox_value': max_per_chapter_checkbox_value}
         self.print_updates('Selected options: ' + str(variables_dict))
 
+        # Import selected file data into list of patient IDs and a list of sets containing the codes per case
         self.print_updates('Loading in input data......')
         self.update_progressbar('Working on Step 1 of 6: Loading in input data......', 0)
         self.update_idletasks()
         patient_ids, codes_per_case_setlist = converter.import_data(input_type, input_filepath)
 
+        # Preprocess imported codes and handle unknown codes
         self.print_updates('Input data loaded. Preprocessing/cleaning data......')
         self.update_progressbar('Working on Step 2 of 6: Preprocessing/cleaning data......', 1)
         self.update_idletasks()
         codes_per_case_list, unrecognized_codes = converter.preprocess_data(codes_per_case_setlist, unknown_mode)
+
+        # Report and handle if unrecognized codes were found
         if unrecognized_codes:
-            if unknown_mode == 'fail':
-                self.print_updates('The models were not developed using the following ICD-10 codes. The prediction will now abort.')
+            if unknown_mode == 'fail':  # Abort conversion by returning to main function if fail approach is chosen
+                self.print_updates('The models were not developed using the following ICD-10 codes. The conversion will now abort.')
                 print(unrecognized_codes)
                 return
 
-            elif unknown_mode == 'ignore':
+            elif unknown_mode == 'ignore': # Abort conversion if cases without codes exist after ignoring unknown codes
                 ids_wo_s_and_t_codes = [patient_ids[idx] for idx in unrecognized_codes]
-                self.print_updates('The cases with the following IDs did not contain any codes to convert after ignoring untrained codes. The prediction will now abort.')
+                self.print_updates('The cases with the following IDs did not contain any codes to convert after ignoring untrained codes. The conversion will now abort.')
                 print(ids_wo_s_and_t_codes)
                 return
 
-            else:
+            else:  # Report code replacements used and continue conversion
                 self.print_updates('The following ICD-10 codes replacements were made.')
                 print(unrecognized_codes)
 
+        # Format pre-processed data for conversion
         self.print_updates('Data preprocessed/cleaned. Formatting data for prediction......')
         self.update_progressbar('Working on Step 3 of 6: Formatting data for prediction......', 2)
         self.update_idletasks()
         formatted_input_data = converter.formatting_data(codes_per_case_list, model_type)
 
+        # Convert formatted pre-processed data into either FFNN logit scores or NMT translated words
         if model_type in ['direct_FFNN', 'indirect_FFNN']:
             str_update = f'Data formatted. Converting using {model_type} in {len(formatted_input_data):,} 64-set batches...'
         else:
@@ -296,21 +320,25 @@ class ICDtoISSApp(ctk.CTk):
         self.update_idletasks()
         conversion_output = converter.convert_data(formatted_input_data, model_type)
 
+        # Post-process converted output into chosen format
         self.print_updates('Data converted. Processing conversion output and extracting ISS......')
         self.update_progressbar('Working on Step 5 of 6: Processing conversion output and extracting ISS......', 4)
         self.update_idletasks()
         output_list = converter.postprocess_data(conversion_output, model_type, not iss_checkbox_value, mais_checkbox_value, max_per_chapter_checkbox_value)
 
+        # Write output results in specified format
         self.print_updates('Conversion output process and ISS extracted. Exporting ISS predictions......')
         self.update_progressbar('Working on Step 6 of 6: Exporting ISS predictions......', 5)
         self.update_idletasks()
         output_file_path = converter.output_iss_results(patient_ids, output_list, input_filepath, model_type, not iss_checkbox_value, mais_checkbox_value, max_per_chapter_checkbox_value)
 
+        # Update textbox and progress bar on completion of all conversion steps
         self.print_updates('ISS predictions written out to: ' + output_file_path)
         self.update_progressbar(f'Done - Conversion using {model_type} completely successfully!', 6)
         self.update_idletasks()
 
     def print_updates(self, string):
+        """Write out log string to console and GUI textbox"""
         string = str(datetime.now()) + ' -- ' + string
         self.textbox.configure(state='normal')
         self.textbox.insert('end', string + '\n')
@@ -318,10 +346,12 @@ class ICDtoISSApp(ctk.CTk):
         print(string)
 
     def update_progressbar(self, string, step_number_from_six):
+        """Update progress bar state and string."""
         self.progress_step_text.configure(text=string)
         self.progress_bar.set(step_number_from_six / 6)
 
 
 def main():
+    """Initialize the conversion app and start main task loop."""
     gui = ICDtoISSApp()
     gui.mainloop()
