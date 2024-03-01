@@ -269,7 +269,7 @@ def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool
         outputted.
 
     Returns:
-        list: List of the predicted ISS scores when a direct model is used or list of lists containing the desired calculated
+        list: List of the predicted ISS scores as a string when a direct model is used or list of strings containing the desired calculated
         outputs when an indirect model is used.
 
     """
@@ -291,19 +291,19 @@ def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool
                   as dict_serialized):
                 possible_iss_set = set(pickle.load(dict_serialized).values())
             # Select only the first predicted ISS score if multiple are predicted from the NMT, confirm that it is a possible
-            # ISS score, and return the full list. If the first predicted ISS score is not possible, return NaN.
+            # ISS score, and return the full list. If the first predicted ISS score is not possible, replace with NaN.
             return [
                 pred[0]
                 if pred[0] in possible_iss_set else 'NaN'
                 for pred in conversion_output]
 
-        case 'indirect_FFNN':  # When a indirect FFNN model is selected
-            # Load in dictionary to convert indirect FFNN predicted dummy variables to ISS scores
+        case 'indirect_FFNN':  # When an indirect FFNN model is selected
+            # Load in dictionary to convert indirect FFNN predicted dummy variables to RCS codes
             with (resources.files('data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
                   as dict_serialized):
                 dummy_to_ais_rcs_dict = pickle.load(dict_serialized)
             # For each set of selected dummy variables as predictions, convert each into corresponding RCS triplets and
-            # generate the desired outputs for the case. If list containing dummy variable predictions is empty, return NaN.
+            # generate the desired outputs for the case. If list containing dummy variable predictions is empty, replace with NaN.
             return [
                 helper.calc_severity_scores(
                     [dummy_to_ais_rcs_dict[encoded_rcs]
@@ -313,11 +313,13 @@ def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool
                 for encoded_rcs_list in conversion_output
             ]
 
-        case 'indirect_NMT':
+        case 'indirect_NMT':  # When an indirect NMT model is selected
+            # Get a set of all possible RCS codes
             with (resources.files('data').joinpath('dummy_to_ais_rcs_dict.pickle').open('rb')
                   as dict_serialized):
                 possible_ais_rcs_set = set(pickle.load(dict_serialized).values())
-
+            # For each set of predicted RCS codes for a given case, remove any unrecognized/non-RCS codes and generate
+            # the desired outputs for the case. If the set of predictions is empty, replace with NaN.
             output_list = []
             for pred_rcs_list in conversion_output:
                 pred_rcs_set = set(pred_rcs_list)
@@ -328,18 +330,36 @@ def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool
                     output_list.append(helper.calc_severity_scores(pred_rcs_set, no_iss_bool, mais_bool, max_severity_chapter_bool))
                 else:
                     output_list.append('NaN')
-
             return output_list
 
-        case '_':
+        case '_':   # Case to catch unrecognized model types and throw an error
             raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
 
 
-def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_bool, mais_bool, max_severity_chapter_bool):
+def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_bool, mais_bool, max_severity_chapter_bool) -> str:
+    """
+    Output postprocessed results in desired format.
+
+    Args:
+        patient_ids (list): List of the patient/case IDs.
+        output_list (list): List of the predicted ISS scores when a direct model is used or list of lists containing the desired calculated
+        outputs when an indirect model is used.
+        file_path (str): Path to the input file.
+        model_type (str): Case representing which model type to use.
+        no_iss_bool (bool): Boolean representing whether ISS scores should not be outputted.
+        mais_bool (bool): Boolean representing whether the MAIS score should be outputted.
+        max_severity_chapter_bool (bool): Boolean representing whether the maximum severity for each AIS chapter should be
+        outputted.
+
+    Returns:
+        output_file_path (str): Path to the written output file.
+
+    """
+    # Since the filename suffix, header of the file, and what to output for a line if there is a NaN depend on the selected model and output options, 
+    # iteratively build up those strings and lists that will be joined together.
     output_file_addon = model_type
     file_header = 'patient_id'
     nan_string_list = []
-
     match model_type:
         case 'direct_FFNN' | 'direct_NMT':
             output_file_addon = output_file_addon + '_iss'
@@ -358,10 +378,11 @@ def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_b
                 output_file_addon = output_file_addon + '_max_chapter_severity'
                 file_header = file_header + ',ch1_head,ch2_face,ch3_neck,ch4_thorax,ch5_abdomen,ch6_spine,ch7_upper_extremity,ch8_lower_extremity,ch9_external,ch0_miscellaneous'
                 nan_string_list = nan_string_list + ['NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN', 'NaN']
-
+    # Create the path to be used as the output file path and join the list containing the correct number of NaNs into a string.
     output_file_path = splitext(file_path)[0] + '.' + output_file_addon + '.csv'
     nan_string = ','.join(nan_string_list)
-
+    # Write the header to the output file and then all of the strings in the output_list, replacing an output string
+    # with the full NaN string if it is 'NaN' in the output_list.
     with open(output_file_path, 'w') as output_file:
         output_file.write(file_header + '\n')
         for patient_id, output in zip(patient_ids, output_list):
