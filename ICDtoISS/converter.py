@@ -1,6 +1,6 @@
 from bisect import bisect_left
 from importlib import resources
-from os import sep, linesep
+from os import sep
 from os.path import commonprefix, splitext
 import pickle
 
@@ -38,7 +38,7 @@ def import_data(input_type: str, filepath: str) -> tuple[list, list]:
             # Create a list of sets that contain only trauma codes for each case
             codes_per_case_setlist = []
             for patient_idx, codes_list in enumerate(arrays):
-                s_and_t_only_codes_list = [code for code in codes_list if code[0].upper() in ['S', 'T']]
+                s_and_t_only_codes_list = [code.strip() for code in codes_list if code[0].upper() in ['S', 'T']]
                 if not s_and_t_only_codes_list:
                     raise ValueError(f'Case with ID#{patient_ids[patient_idx]} does not contain any trauma (S00-T88) ICD-10 codes.')
                 codes_per_case_setlist.append(set(s_and_t_only_codes_list))
@@ -54,7 +54,7 @@ def import_data(input_type: str, filepath: str) -> tuple[list, list]:
             for codes_str in codes_per_case_list:
                 code_list = codes_str.split(',')
                 patient_ids.append(code_list.pop(0))
-                s_and_t_only_codes_list = [code for code in code_list if code[0].upper() in ['S', 'T']]
+                s_and_t_only_codes_list = [code.strip() for code in code_list if code[0].upper() in ['S', 'T']]
                 if not s_and_t_only_codes_list:
                     raise ValueError(f'The following case does not contain any trauma (S00-T88) ICD-10 codes:\n{codes_str}')
                 codes_per_case_setlist.append(set(s_and_t_only_codes_list))
@@ -381,7 +381,7 @@ def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_b
     # Create the path to be used as the output file path and join the list containing the correct number of NaNs into a string.
     output_file_path = splitext(file_path)[0] + '.' + output_file_addon + '.csv'
     nan_string = ','.join(nan_string_list)
-    # Write the header to the output file and then all of the strings in the output_list, replacing an output string
+    # Write the header to the output file and then all the strings in the output_list, replacing an output string
     # with the full NaN string if it is 'NaN' in the output_list.
     with open(output_file_path, 'w') as output_file:
         output_file.write(file_header + '\n')

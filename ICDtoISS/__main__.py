@@ -4,6 +4,10 @@ import gui
 import no_gui
 
 from pathlib import Path
+try:
+    import pyi_splash
+except ModuleNotFoundError:
+    pass
 
 
 def main():
@@ -45,9 +49,13 @@ def main():
         print('"No GUI" flag was provided. Running in terminal mode......')
         no_gui.main(args)
     else:
-        print('Starting up ICDtoISS GUI......')
+        print('Running in GUI mode. Waiting for user to begin a conversion...')
         gui.main()
 
 
 if __name__ == "__main__":
+    try:
+        pyi_splash.close()
+    except NameError:
+        pass
     main()
