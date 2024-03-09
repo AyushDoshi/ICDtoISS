@@ -1,7 +1,7 @@
 
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/AyushDoshi/ICDtoISS/master/img/ICDtoISS_logo.png" alt="ICDtoISS" width="300"></a>
+  <img src="https://raw.githubusercontent.com/AyushDoshi/ICDtoISS/master/img/ICDtoISS_logo.png" alt="ICDtoISS" width="250"></a>
   <br>
   ICDtoISS
   <br>
