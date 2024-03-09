@@ -152,7 +152,7 @@ class ICDtoISSApp(ctk.CTk):
         # Add additional indirect output options frame and checkboxes
         self.indirect_options_logo = ctk.CTkLabel(self.options_frame, text='Indirect Model\noutput options:', padx=5, text_color=["gray60", "gray45"], font=ctk.CTkFont(size=14, weight='bold'), justify='right')
         self.indirect_options_logo.grid(row=6, column=0, columnspan=1, padx=(20, 0), pady=(20, 0), sticky='e')
-        self.indirect_options_logo_tooltip = CTkToolTip(self.indirect_options_logo, delay=0.5, alpha=0.9, message="Select which metrics to output when an indirect model is chosen. Checkbox selection is ignored when a direct model is used.\n"
+        self.indirect_options_logo_tooltip = CTkToolTip(self.indirect_options_logo, delay=0.5, alpha=0.9, message="Select which metrics to output when an indirect model is chosen. Only for indirect models - no effect for direct models.\n"
                                                                                                                         "ISS: Output Injury Severity Score.\n"
                                                                                                                         "MAIS: Output Maximum Abbreviated Injury Scale score.\n"
                                                                                                                         "Greatest Severity per AIS Chapter: Output the greatest AIS severity for each AIS chapter.")
