@@ -26,7 +26,7 @@
   - Direct NMT: Use an NMT to directly convert ICD10 codes to ISS
   - Indirect FFNN: Use a FFNN to indirectly convert ICD10 codes to ISS by first converting to AIS08 and calculating ISS
   - Indirect NMT: Use an NMT to indirectly convert ICD10 codes to ISS by first converting to AIS08 and calculating ISS
-* Indirect models can also output global or chapterwise Maximum AIS 
+* Indirect models can also output global and/or chapterwise Maximum AIS 
 * Commandline and GUI support
 * Accepts both long ([e.g.](example_data/long_format_sample_16_codes.csv)) and wide ([e.g.](example_data/wide_format_sample_16_codes.csv)) CSV formatted data
 * Choose how to handle unrecognized trauma ICD10 codes in three ways
@@ -53,7 +53,7 @@ The application can be run in two ways: GUI mode or commandline mode
       - [Long format example](example_data/long_format_sample_16_codes.csv) and [wide format example](example_data/wide_format_sample_16_codes.csv)
    3. Select how to handle unrecognized codes
    4. Select what model to use
-   5. (Optional for indirect models) Select what to output
+   5. (Optional for indirect models) Select any additional outputs
 3. Start conversion
 4. Output file will be in the input folder and have the input filename appended with model and selected output information
 
