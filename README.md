@@ -1,10 +1,6 @@
 
 <h1 align="center">
-  <br>
   <img src="https://raw.githubusercontent.com/AyushDoshi/ICDtoISS/master/img/ICDtoISS_logo.png" alt="ICDtoISS" width="250"></a>
-  <br>
-  ICDtoISS
-  <br>
 </h1>
 <h4 align="center">A <a href="http://https://pytorch.org" target="_blank">PyTorch</a>-powered ICD-10CM to Injury Severity Score (ISS) conversion tool</h4>
 
