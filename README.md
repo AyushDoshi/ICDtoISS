@@ -25,7 +25,7 @@
 * Indirect models can also output global and/or chapterwise Maximum AIS 
 * Commandline and GUI support
 * Accepts both long ([e.g.](example_data/long_format_sample_16_codes.csv)) and wide ([e.g.](example_data/wide_format_sample_16_codes.csv)) CSV formatted data
-* Choose how to handle unrecognized trauma ICD10 codes in three ways
+* Choose how to handle unrecognized trauma ICD10 codes in three ways:
   - Use closest lexicographic code
   - Ignore unknown codes
   - Abort conversion on unknown codes
