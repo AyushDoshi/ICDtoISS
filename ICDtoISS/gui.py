@@ -263,12 +263,12 @@ class ICDtoISSApp(ctk.CTk):
 
         # Confirm a valid file path is given
         if not Path(input_filepath).is_file():
-            CTkMessagebox(title="Error", message="No valid input file given!", icon="cancel")
+            CTkMessagebox(title="Error!", message="No valid input file given!", icon="cancel")
             return
 
         # Confirm at least one output is chosen when an indirect conversion method is used
         if model_type in ['indirect_FFNN', 'indirect_NMT'] and iss_checkbox_value == mais_checkbox_value == max_per_chapter_checkbox_value is False:
-            CTkMessagebox(title="Error", message="At least one indirect output checkbox must be selected!", icon="cancel")
+            CTkMessagebox(title="Error!", message="At least one indirect output checkbox must be selected!", icon="cancel")
             return
 
         # Write out selected variables in output textbox
@@ -280,12 +280,26 @@ class ICDtoISSApp(ctk.CTk):
         self.update_progressbar('Working on Step 1 of 6: Loading in input data......', 0)
         self.update_idletasks()
         patient_ids, codes_per_case_setlist = converter.import_data(input_type, input_filepath)
+        # If patient_ids is a string, there was an error in loading the data
+        if isinstance(patient_ids, str):
+            self.print_updates(patient_ids)
+            self.update_progressbar('Error on Step 1 of 6: Loading in input data......', 0)
+            self.update_idletasks()
+            CTkMessagebox(title="Error!", message=patient_ids, icon="cancel")
+            return
 
         # Preprocess imported codes and handle unknown codes
         self.print_updates('Input data loaded. Preprocessing/cleaning data......')
         self.update_progressbar('Working on Step 2 of 6: Preprocessing/cleaning data......', 1)
         self.update_idletasks()
         codes_per_case_list, unrecognized_codes = converter.preprocess_data(codes_per_case_setlist, unknown_mode)
+        # If codes_per_case_list is a string, there was an error in preprocessing/cleaning the data
+        if isinstance(codes_per_case_list, str):
+            self.print_updates(codes_per_case_list)
+            self.update_progressbar('Error on Step 2 of 6: Preprocessing/cleaning data......', 1)
+            self.update_idletasks()
+            CTkMessagebox(title="Error!", message=codes_per_case_list, icon="cancel")
+            return
 
         # Report and handle if unrecognized codes were found
         if unrecognized_codes:
@@ -309,6 +323,13 @@ class ICDtoISSApp(ctk.CTk):
         self.update_progressbar('Working on Step 3 of 6: Formatting data for prediction......', 2)
         self.update_idletasks()
         formatted_input_data = converter.formatting_data(codes_per_case_list, model_type)
+        # If formatted_input_data is a string, there was an error in formatting the data
+        if isinstance(formatted_input_data, str):
+            self.print_updates(formatted_input_data)
+            self.update_progressbar('Error on Step 3 of 6: Formatting data for prediction......', 2)
+            self.update_idletasks()
+            CTkMessagebox(title="Error!", message=formatted_input_data, icon="cancel")
+            return
 
         # Convert formatted pre-processed data into either FFNN logit scores or NMT translated words
         if model_type in ['direct_FFNN', 'indirect_FFNN']:

@@ -7,13 +7,14 @@ import pickle
 import ctranslate2
 import numpy as np
 import pandas as pd
+import pandas.errors
 import torch
 from tqdm import tqdm
 
 import helper
 
 
-def import_data(input_type: str, filepath: str) -> tuple[list, list]:
+def import_data(input_type: str, filepath: str) -> tuple[list | str, list | None]:
     """
    Import data from input file.
 
@@ -27,7 +28,11 @@ def import_data(input_type: str, filepath: str) -> tuple[list, list]:
    """
     match input_type:
         case 'code_per_row':  # Data formatted in long format (single code per row)
-            codes_per_row_df = pd.read_csv(filepath, dtype='string', header=None)
+            try:
+                codes_per_row_df = pd.read_csv(filepath, dtype='string', header=None)
+            except pandas.errors.ParserError:
+                error_string = 'Encountered a pandas ParserError during importing of the data.\n\n Please check that the correct "input file data structure" option was selected.'
+                return error_string, None
             codes_per_row_df.columns = ['key', 'ICD10Code']
 
             # Convert long format to list of IDs and list of lists, each containing the codes for a given case
@@ -40,7 +45,8 @@ def import_data(input_type: str, filepath: str) -> tuple[list, list]:
             for patient_idx, codes_list in enumerate(arrays):
                 s_and_t_only_codes_list = [code.strip() for code in codes_list if code[0].upper() in ['S', 'T']]
                 if not s_and_t_only_codes_list:
-                    raise ValueError(f'Case with ID#{patient_ids[patient_idx]} does not contain any trauma (S00-T88) ICD-10 codes.')
+                    error_string = f'Case with ID#{patient_ids[patient_idx]} does not contain any trauma (S00-T88) ICD-10 codes.'
+                    return error_string, None
                 codes_per_case_setlist.append(set(s_and_t_only_codes_list))
 
         case 'case_per_row':  # Data formatted in wide format (all codes per case in a row)
@@ -56,16 +62,24 @@ def import_data(input_type: str, filepath: str) -> tuple[list, list]:
                 patient_ids.append(code_list.pop(0))
                 s_and_t_only_codes_list = [code.strip() for code in code_list if code[0].upper() in ['S', 'T']]
                 if not s_and_t_only_codes_list:
-                    raise ValueError(f'The following case does not contain any trauma (S00-T88) ICD-10 codes:\n{codes_str}')
+                    error_string = f'The following case does not contain any trauma (S00-T88) ICD-10 codes:\n{codes_str}'
+                    return error_string, None
                 codes_per_case_setlist.append(set(s_and_t_only_codes_list))
 
+            # Confirm that the correct data structure option was chosen by checking for duplicates in the patient_ids list
+            if len(patient_ids) != len(set(patient_ids)):
+                error_string = 'Duplicate patient IDs were found in the first column, suggesting the input file is not in the selected wide format.\n\n Please check that the correct "input file data structure" option was selected.'
+                return error_string, None
+
+
         case '_':  # Case to catch any other structure type strings and throw error
-            raise ValueError('Incompatible file structure type was given. Can only accept "code_per_row" or "case_per_row".')
+            error_string = 'Incompatible file structure type was given. Can only accept "code_per_row" or "case_per_row".'
+            return error_string, None
 
     return patient_ids, codes_per_case_setlist
 
 
-def preprocess_data(codes_per_case_setlist: list, unknown_mode: str) -> tuple[list, dict | list | None]:
+def preprocess_data(codes_per_case_setlist: list, unknown_mode: str) -> tuple[list | str, dict | list | None]:
     """
     Pre-process input data and handle unknown codes.
 
@@ -152,12 +166,13 @@ def preprocess_data(codes_per_case_setlist: list, unknown_mode: str) -> tuple[li
             all_unrecognized_codes = sorted(all_unrecognized_codes_set)
 
         case '_':  # Case to catch any unrecognized unknown handling method strings and throw an error.
-            raise ValueError('Incompatible unknown code handling method was given. Can only accept "closest", "ignore", or "fail".')
+            error_string = 'Incompatible unknown code handling method was given. Can only accept "closest", "ignore", or "fail".'
+            return error_string, None
 
     return codes_per_case_list, all_unrecognized_codes
 
 
-def formatting_data(codes_per_case_list: list, model_type: str) -> list:
+def formatting_data(codes_per_case_list: list, model_type: str) -> list | str:
     """
     Format preprocessed trauma codes to be inputted into the selected conversion tool.
 
@@ -188,7 +203,8 @@ def formatting_data(codes_per_case_list: list, model_type: str) -> list:
             return formatted_codes_per_case_list
 
         case '_':  # Case to catch unrecognized model types and throw an error
-            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
+            error_string = 'Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".'
+            return error_string
 
 
 def convert_data(formatted_input_data: list, model_type: str) -> list:
@@ -250,9 +266,6 @@ def convert_data(formatted_input_data: list, model_type: str) -> list:
                 prediction = translator.translate_batch([formatted_codes_list])
                 results.append(prediction[0].hypotheses[0])
             return results
-
-        case '_':  # Case to catch unrecognized model types and throw an error
-            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
 
 
 def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool, mais_bool: bool, max_severity_chapter_bool: bool) -> list:
@@ -331,9 +344,6 @@ def postprocess_data(conversion_output: list, model_type: str, no_iss_bool: bool
                 else:
                     output_list.append('NaN')
             return output_list
-
-        case '_':   # Case to catch unrecognized model types and throw an error
-            raise ValueError('Incompatible model type was given. Can only accept "direct FFNN", "direct NMT", "indirect FFNN", or "indirect NMT".')
 
 
 def output_iss_results(patient_ids, output_list, file_path, model_type, no_iss_bool, mais_bool, max_severity_chapter_bool) -> str:

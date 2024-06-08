@@ -15,10 +15,16 @@ def main(args):
     # Import selected file data into list of patient IDs and a list of sets containing the codes per case
     print_updates('Loading in input data......')
     patient_ids, codes_per_case_setlist = converter.import_data(args.input_type, args.file)
+    # If patient_ids is a string, there was an error in loading the data
+    if isinstance(patient_ids, str):
+        raise ValueError(patient_ids)
 
     # Preprocess imported codes and handle unknown codes
     print_updates('Input data loaded. Preprocessing/cleaning data......')
     codes_per_case_list, unrecognized_codes = converter.preprocess_data(codes_per_case_setlist, args.unknown_mode)
+    # If codes_per_case_list is a string, there was an error in preprocessing/cleaning the data
+    if isinstance(codes_per_case_list, str):
+        raise ValueError(codes_per_case_list)
 
     # Report and handle if unrecognized codes were found
     if unrecognized_codes:
@@ -40,6 +46,9 @@ def main(args):
     # Format pre-processed data for conversion
     print_updates('Data preprocessed/cleaned. Formatting data for prediction......')
     formatted_input_data = converter.formatting_data(codes_per_case_list, args.model)
+    # If formatted_input_data is a string, there was an error in formatting the data
+    if isinstance(formatted_input_data, str):
+        raise ValueError(formatted_input_data)
 
     # Convert formatted pre-processed data into either FFNN logit scores or NMT translated words
     if args.model in ['direct_FFNN', 'indirect_FFNN']:

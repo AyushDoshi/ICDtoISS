@@ -37,7 +37,7 @@ def main():
     args = parser.parse_args()
 
     # Require valid file if in no gui mode
-    if args.no_gui and not Path(args.file).is_file():
+    if args.no_gui and (not args.file or not Path(args.file).is_file()):
         raise ValueError('Must give valid file path if no-gui flag is used.')
 
     # Check that an output option is selected when indirect method is used
@@ -46,8 +46,16 @@ def main():
 
     # Run respective main functions depending on whether no gui flag is set
     if args.no_gui:
+        #  Confirm that a valid file path is provided
+        if not args.file or not Path(args.file).is_file():
+            raise ValueError('Must give valid file path if no-gui flag is used.')
+        # Confirm that at least one output option is selected when an indirect model is used
+        if args.model in ['indirect_FFNN', 'indirect_NMT'] and args.no_iss and args.mais == args.max_sev_per_chapter is False:
+            raise ValueError('Must select some output for the indirect model. Cannot both ignore ISS as well as not output either the MAIS or greatest severity per AIS chapter.')
+
         print('"No GUI" flag was provided. Running in terminal mode......')
         no_gui.main(args)
+
     else:
         print('Running in GUI mode. Waiting for user to begin a conversion...')
         gui.main()
